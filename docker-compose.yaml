@@ -1,0 +1,56 @@
+version: "3.9"
+services:
+  vote:
+    build: ./vote
+    depends_on:
+      redis:
+        condition: service_healthy 
+    volumes:
+     - ./vote:/app
+    ports:
+      - "5000:80"
+
+  result:
+    build: ./result
+    depends_on:
+      db:
+        condition: service_healthy 
+    volumes:
+      - ./result:/app
+    ports:
+      - "5001:80"
+      - "5858:5858"
+
+  worker:
+    build:
+      context: ./worker
+    depends_on:
+      redis:
+        condition: service_healthy 
+      db:
+        condition: service_healthy 
+
+  redis:
+    image: redis:5.0-alpine3.10
+    volumes:
+      - "./healthchecks:/healthchecks"
+    healthcheck:
+      test: /healthchecks/redis.sh
+      interval: "5s"
+    ports: ["6379"]
+
+  db:
+    image: postgres:9.4
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - "db-data:/var/lib/postgresql/data"
+      - "./healthchecks:/healthchecks"
+    healthcheck:
+      test: /healthchecks/postgres.sh
+      interval: "5s"
+
+volumes:
+  db-data:
+
